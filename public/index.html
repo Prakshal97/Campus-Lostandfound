@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reclaim — Campus Lost & Found</title>
+  <meta name="description" content="Simple, fast, and verified campus lost and found system.">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand" onclick="switchView('home')">
+        <div class="brand-icon">🔍</div>
+        <span>Reclaim</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#" class="nav-link active" id="nav-home" onclick="switchView('home')">Browse Items</a></li>
+        <li><a href="#" class="nav-link" id="nav-admin" onclick="switchView('admin')">Admin Desk</a></li>
+        <li><a href="#" class="nav-link" id="nav-qr" onclick="openQrModal()">QR Posters</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <!-- Role Switcher -->
+        <div class="role-switcher">
+          <span style="color:var(--text-muted); font-size:0.8rem;">Role:</span>
+          <select id="current-role" class="role-select" onchange="changeUserRole(this.value)">
+            <option value="user_aanya">Aanya (Student Owner)</option>
+            <option value="user_rohan">Rohan (Student Finder)</option>
+            <option value="user_patil">Mr. Patil (Security Admin)</option>
+          </select>
+        </div>
+
+        <!-- Notification Bell -->
+        <button class="icon-btn" onclick="toggleNotifDrawer()" title="Notifications">
+          🔔
+          <span class="badge-dot" id="notif-count">2</span>
+        </button>
+
+        <button class="btn btn-sm btn-secondary" onclick="resetDemoData()" title="Reset demo data">
+          🔄 Reset Demo
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container" id="main-content">
+
+    <!-- BROWSE & HOME VIEW -->
+    <div id="view-home">
+      
+      <!-- Clean Hero Section -->
+      <section class="hero">
+        <h1>Campus Lost & Found</h1>
+        <p>Report lost or found items in 60 seconds and get matched automatically with secure verification.</p>
+
+        <div class="hero-buttons">
+          <button class="btn btn-primary" onclick="openReportModal('lost')">
+            🔍 Report Lost Item
+          </button>
+          <button class="btn btn-success" onclick="openReportModal('found')">
+            ➕ Report Found Item
+          </button>
+        </div>
+
+        <!-- Metrics Strip -->
+        <div class="metrics-row">
+          <div class="metric-item">
+            <div class="metric-val" id="stat-recovery">87%</div>
+            <div class="metric-lbl">Recovery Rate</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-val" id="stat-returned" style="color:var(--success);">14</div>
+            <div class="metric-lbl">Items Returned</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-val" id="stat-desk" style="color:var(--warning);">5</div>
+            <div class="metric-lbl">Desk Custody</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search & Filters -->
+      <section class="search-section">
+        <div class="filter-box">
+          <div class="filter-controls">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="search-input" class="search-input" placeholder="Search items by name, brand, color..." oninput="onSearchInput()">
+            </div>
+
+            <select id="filter-type" class="select-control" onchange="loadItems()">
+              <option value="">All Types (Lost & Found)</option>
+              <option value="lost">Lost Items</option>
+              <option value="found">Found Items</option>
+            </select>
+
+            <select id="filter-location" class="select-control" onchange="loadItems()">
+              <option value="">All Locations</option>
+              <option value="library">Central Library</option>
+              <option value="canteen">Student Canteen</option>
+              <option value="lab_block">Engineering Labs</option>
+              <option value="sports_complex">Sports Complex</option>
+              <option value="auditorium">Auditorium</option>
+              <option value="admin_block">Admin Block</option>
+            </select>
+
+            <select id="filter-status" class="select-control" onchange="loadItems()">
+              <option value="">All Statuses</option>
+              <option value="Reported">Reported</option>
+              <option value="Matched">Matched</option>
+              <option value="AtDesk">At Desk</option>
+              <option value="Verified">Verified (OTP Ready)</option>
+              <option value="Returned">Returned</option>
+            </select>
+          </div>
+
+          <!-- Category Tags -->
+          <div class="category-tags">
+            <button class="tag-btn active" onclick="setCategoryFilter('', this)">All Categories</button>
+            <button class="tag-btn" onclick="setCategoryFilter('electronics', this)">🎧 Electronics</button>
+            <button class="tag-btn" onclick="setCategoryFilter('ID/cards', this)">🪪 ID Cards</button>
+            <button class="tag-btn" onclick="setCategoryFilter('books', this)">📚 Books</button>
+            <button class="tag-btn" onclick="setCategoryFilter('bags', this)">🎒 Bags</button>
+            <button class="tag-btn" onclick="setCategoryFilter('keys', this)">🔑 Keys</button>
+            <button class="tag-btn" onclick="setCategoryFilter('bottles', this)">🧴 Bottles</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cards Grid -->
+      <section style="margin-bottom:3rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h2 style="font-size:1.25rem;">Reported Items</h2>
+          <span style="color:var(--text-muted); font-size:0.85rem;" id="total-count-label">Loading...</span>
+        </div>
+        
+        <div class="items-grid" id="items-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ADMIN DESK VIEW -->
+    <div id="view-admin" style="display:none; padding:2rem 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <h2>Security Desk Dashboard</h2>
+        <button class="btn btn-sm btn-secondary" onclick="switchView('home')">← Back to Registry</button>
+      </div>
+
+      <!-- Campus Map -->
+      <div class="map-card">
+        <h3 style="font-size:1.1rem; margin-bottom:1rem;">📍 Campus Incident Map</h3>
+        <svg viewBox="0 0 1000 450" style="width:100%; height:320px; background:#f8fafc; border-radius:var(--radius-md); border:1px solid var(--border-color);" id="campus-heatmap-svg">
+          <!-- Rendered dynamically -->
+        </svg>
+      </div>
+
+      <!-- Admin Queue Table -->
+      <div style="background:white; border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.25rem;">
+        <h3 style="font-size:1.1rem; margin-bottom:1rem;">Custody & Verification Queue</h3>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border-color); text-align:left; color:var(--text-muted);">
+                <th style="padding:0.6rem;">Item</th>
+                <th style="padding:0.6rem;">Location</th>
+                <th style="padding:0.6rem;">Custody</th>
+                <th style="padding:0.6rem;">Status</th>
+                <th style="padding:0.6rem;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-queue-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- STEPPED REPORT MODAL -->
+  <div class="modal-backdrop" id="modal-report">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="report-modal-title">Report Item</h3>
+        <button class="modal-close" onclick="closeModal('modal-report')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="steps-nav">
+          <div class="step-pill active" id="step-pill-1"></div>
+          <div class="step-pill" id="step-pill-2"></div>
+          <div class="step-pill" id="step-pill-3"></div>
+        </div>
+
+        <form id="report-form" onsubmit="submitReportForm(event)">
+          
+          <!-- STEP 1 -->
+          <div id="report-step-1">
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-select" id="form-type" onchange="onReportTypeChange(this.value)">
+                <option value="lost">Lost Item</option>
+                <option value="found">Found Item</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select class="form-select" id="form-category" required>
+                <option value="electronics">🎧 Electronics</option>
+                <option value="ID/cards">🪪 ID & Cards</option>
+                <option value="books">📚 Books & Notes</option>
+                <option value="bags">🎒 Bags & Wallets</option>
+                <option value="keys">🔑 Keys</option>
+                <option value="clothing">🧥 Clothing</option>
+                <option value="bottles">🧴 Water Bottle</option>
+                <option value="other">📦 Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input type="text" class="form-input" id="form-title" placeholder="e.g. Sony Wireless Earphones" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="form-textarea" id="form-description" rows="2" placeholder="Brief description, brand, color..." required></textarea>
+            </div>
+
+            <button type="button" class="btn btn-primary" style="width:100%;" onclick="goToFormStep(2)">Next: Location →</button>
+          </div>
+
+          <!-- STEP 2 -->
+          <div id="report-step-2" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">Location Zone</label>
+              <select class="form-select" id="form-location" required>
+                <option value="canteen">Student Canteen</option>
+                <option value="library">Central Library</option>
+                <option value="lab_block">Engineering Labs</option>
+                <option value="sports_complex">Sports Complex</option>
+                <option value="auditorium">Main Auditorium</option>
+                <option value="admin_block">Admin Block</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Date & Time</label>
+              <input type="datetime-local" class="form-input" id="form-date" required>
+            </div>
+
+            <div id="found-only-fields">
+              <div class="form-group">
+                <label class="form-label">Custody</label>
+                <select class="form-select" id="form-custody">
+                  <option value="at desk">Dropped at Security Desk</option>
+                  <option value="with me">Holding with me</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Verification Question (Secret mark check)</label>
+                <input type="text" class="form-input" id="form-verify-q" placeholder="e.g. What sticker is on the back?">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Answer</label>
+                <input type="text" class="form-input" id="form-verify-a" placeholder="Secret answer">
+              </div>
+            </div>
+
+            <div style="display:flex; gap:0.5rem;">
+              <button type="button" class="btn btn-secondary" style="flex:1;" onclick="goToFormStep(1)">← Back</button>
+              <button type="button" class="btn btn-primary" style="flex:1;" onclick="goToFormStep(3)">Next: Submit →</button>
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div id="report-step-3" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">Attach Photo (Optional)</label>
+              <input type="file" id="form-photo" class="form-input" accept="image/*">
+            </div>
+
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="form-sensitive">
+              <label for="form-sensitive" style="font-size:0.85rem; font-weight:500;">Blur photo (for sensitive items like ID/Wallets)</label>
+            </div>
+
+            <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+              <button type="button" class="btn btn-secondary" style="flex:1;" onclick="goToFormStep(2)">← Back</button>
+              <button type="submit" class="btn btn-success" style="flex:1;">Submit Report</button>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ITEM DETAIL MODAL -->
+  <div class="modal-backdrop" id="modal-detail">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="detail-title">Item Details</h3>
+        <button class="modal-close" onclick="closeModal('modal-detail')">&times;</button>
+      </div>
+      <div class="modal-body" id="detail-body">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- CLAIM MODAL -->
+  <div class="modal-backdrop" id="modal-claim">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Claim Item</h3>
+        <button class="modal-close" onclick="closeModal('modal-claim')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="claim-form" onsubmit="submitClaimForm(event)">
+          <input type="hidden" id="claim-item-id">
+          
+          <div class="form-group" id="claim-q-container">
+            <label class="form-label" id="claim-q-label">Finder's Question:</label>
+            <input type="text" class="form-input" id="claim-answer" placeholder="Your answer...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Proof of Ownership / Distinguishing Mark *</label>
+            <textarea class="form-textarea" id="claim-mark" rows="3" placeholder="Describe unique features, scratches, stickers..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;">Submit Claim</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR MODAL -->
+  <div class="modal-backdrop" id="modal-qr">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Printable QR Poster</h3>
+        <button class="modal-close" onclick="closeModal('modal-qr')">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <select class="form-select" id="qr-zone-select" style="margin-bottom:1rem;" onchange="generateQrPoster(this.value)">
+          <option value="canteen">Student Canteen</option>
+          <option value="library">Central Library</option>
+          <option value="lab_block">Engineering Labs</option>
+        </select>
+
+        <div style="background:#f8fafc; border:1px solid var(--border-color); padding:1.5rem; border-radius:var(--radius-md);">
+          <h3 style="color:var(--primary); font-size:1.2rem; margin-bottom:0.25rem;">Reclaim Lost & Found</h3>
+          <div style="font-weight:700; color:var(--text-main); margin-bottom:1rem;" id="qr-poster-zone-name">STUDENT CANTEEN</div>
+          
+          <div style="width:140px; height:140px; margin:0 auto 1rem; border:2px solid var(--primary); border-radius:8px; padding:6px; background:#fff;">
+            <svg width="124" height="124" viewBox="0 0 100 100">
+              <rect width="100" height="100" fill="#ffffff"/>
+              <path d="M10 10h30v30h-30z M15 15h20v20h-20z M20 20h10v10h-10z M60 10h30v30h-30z M65 15h20v20h-20z M70 20h10v10h-10z M10 60h30v30h-30z M15 65h20v20h-20z M20 70h10v10h-10z M50 50h10v10h-10z M70 50h10v10h-10z M50 70h10v10h-10z M60 60h10v10h-10z M80 70h10v20h-10z M60 80h10v10h-10z" fill="#4f46e5"/>
+            </svg>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">Scan to report found item</div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; margin-top:1rem;" onclick="window.print()">🖨️ Print Poster</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION DRAWER -->
+  <div class="drawer" id="notif-drawer">
+    <div style="padding:1rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+      <h4 style="font-size:1rem;">Notifications</h4>
+      <button class="modal-close" onclick="toggleNotifDrawer()">&times;</button>
+    </div>
+    <div style="padding:1rem; flex:1; overflow-y:auto;" id="notif-list">
+      <!-- Rendered dynamically -->
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
